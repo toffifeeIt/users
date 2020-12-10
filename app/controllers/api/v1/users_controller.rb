@@ -16,17 +16,28 @@ module Api
 
             #POST /users
             def create
-                user = User.new(user_params)
-                if user.save
-                    render json: {status: 'SUCCESS', message: 'Saved user', data: user}, status: :ok
+                @user = User.new(user_params)
+                if @user.save
+                    render json: {status: 'SUCCESS', message: 'User created', data: @user}, status: :ok
                 else
-                    render json: {status: 'ERROR', message: 'User not saved', data: user.errors}, status: :unprocessable_entry
+                    render json: {status: 'ERROR', message: 'Unable to create user', data: user.errors}, status: 400
+                end
+            end
+
+            #PUT /users/:id
+            def update
+                @user = User.find(params[:id])
+                if @user
+                    @user.update(user_params)
+                    render json: {status: 'SUCCESS', message: 'User successfully updated', data: @user}, status: :ok
+                else
+                    render json: {status: 'ERROR', message: 'Unable to update user', data: user.errors}, status: 400
                 end
             end
             
             private
             def user_params
-                params.permit(:first_name, :last_name, :email)
+                params.permit(:first_name, :last_name, :email, :password)
             end
         
         end
