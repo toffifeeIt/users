@@ -8,5 +8,6 @@ class CreateUsers < ActiveRecord::Migration[6.1]
       t.timestamps
     end
     add_column :users, :password_digest, :string
+    add_column :users, :token, :string
   end
 end
