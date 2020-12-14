@@ -3,6 +3,9 @@ module Api
         class UsersController < ApplicationController
             include ActionController::Cookies
 
+            # before_action: auth_by_token
+            before_action :set_current_user
+
             #GET /users
             def index
                 @users = User.all
@@ -28,9 +31,7 @@ module Api
             #PUT /users/:id
             def update
                 @user = User.find(params[:id])
-                puts 'helloooo '
-                puts cookies[:token]
-                if @user && @user.token && cookies[:token]
+                if @user && @user.token && @user.token == cookies[:token]
                     @user.update(user_params)
                     render json: {status: 'SUCCESS', message: 'User successfully updated', data: @user}, status: :ok
                 else
@@ -39,28 +40,45 @@ module Api
             end
 
             
-            # POST /users/sign_in
+            # POST /sign_in
             def sign_in
                 @user = User.find_by(email: params[:email])
             
                 if @user && @user.authenticate(params[:password])
                 @user.token = generate_token
                 @user.save
-                puts @user.token
                 cookies[:token] = { value: @user.token, expires: 21.day.from_now }
+                puts cookies[:token]
                 # render json: @user.as_json(only: [:email, :first_name, :last_name]), status: :created
                 render json: @user.attributes.except('password_digest', 'token')
                 else
                 # head(:unauthorized)
-                render json: {status: 'ERROR', message: 'Unable to sign in', data: @user.errors}, status: 400
+                render json: {status: 'ERROR', message: 'Unable to sign in', data: @user.errors}, status: 401
                 end
             end
+
+            #POST /sign_out
+            def sign_out        
+                if @current_user    
+                    @current_user.update(token: nil)
+                    cookies.delete :token
+                    render json: {status: 'SUCCESS', message: 'User successfully signed out', data: @current_user.email}, status: :ok
+                else
+                    render json: {status: 'ERROR', message: 'User is not signin', data: @user.errors}, status: 400
+                end
+
+            end
+    
 
             def generate_token
                 loop do
                 token = SecureRandom.hex(10)
                 break token unless User.where(token: token).exists?
                 end
+            end
+
+            def set_current_user
+                @current_user =  User.find_by(token: cookies[:token])
             end
             
             private
