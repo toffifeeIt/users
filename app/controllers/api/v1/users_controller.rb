@@ -3,8 +3,7 @@ module Api
         class UsersController < ApplicationController
             include ActionController::Cookies
 
-            # before_action: auth_by_token
-            before_action :set_current_user
+            before_action :set_current_user, except: %i[sign_in]
 
             #GET /users
             def index
@@ -15,7 +14,11 @@ module Api
             #GET user/:id
             def show
                 @user = User.find(params[:id])
-                render json: {status: 'SUCCESS', message: 'Loaded user', data: @user}, status: :ok
+                if @user && @user.token == @current_user.token
+                    render json: {status: 'SUCCESS', message: 'Loaded user', data: @user}, status: :ok
+                else
+                    render json: {status: 'ERROR', message: 'Unable to get user', data: @user.errors}, status: 400
+                end
             end
 
             #POST /users
@@ -31,7 +34,7 @@ module Api
             #PUT /users/:id
             def update
                 @user = User.find(params[:id])
-                if @user && @user.token && @user.token == cookies[:token]
+                if @user && @user.token == @current_user.token
                     @user.update(user_params)
                     render json: {status: 'SUCCESS', message: 'User successfully updated', data: @user}, status: :ok
                 else
@@ -43,7 +46,6 @@ module Api
             # POST /sign_in
             def sign_in
                 @user = User.find_by(email: params[:email])
-            
                 if @user && @user.authenticate(params[:password])
                 @user.token = generate_token
                 @user.save
